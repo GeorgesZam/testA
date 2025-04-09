@@ -2,43 +2,38 @@ import streamlit as st
 import whisper
 import tempfile
 import os
-from moviepy.editor import VideoFileClip
+import ffmpeg
 
 st.set_page_config(page_title="Transcripteur de conférences", layout="centered")
-
 st.title("🎤 Transcripteur vidéo → texte pour conférences")
 
 uploaded_file = st.file_uploader("📤 Téléverse ta vidéo de conférence", type=["mp4", "mov", "avi", "mkv"])
 
 if uploaded_file is not None:
     with st.spinner("📽️ Traitement de la vidéo..."):
-        # Sauvegarde temporaire
+        # Sauvegarde temporaire de la vidéo
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_video:
             tmp_video.write(uploaded_file.read())
             video_path = tmp_video.name
 
-        # Extraction de l'audio
-        st.info("🔊 Extraction de l'audio...")
-        audio_path = video_path.replace(".mp4", ".mp3")
-        clip = VideoFileClip(video_path)
-        clip.audio.write_audiofile(audio_path)
+        # Conversion en audio avec ffmpeg
+        st.info("🔊 Extraction de l'audio avec ffmpeg...")
+        audio_path = video_path.replace(".mp4", ".wav")
 
-        # Chargement du modèle Whisper
-        st.info("🧠 Chargement du modèle Whisper...")
-        model = whisper.load_model("base")  # tu peux tester "small" ou "medium" selon ta machine
+        ffmpeg.input(video_path).output(audio_path, ac=1, ar='16000').run(quiet=True, overwrite_output=True)
 
-        # Transcription
-        st.info("✍️ Transcription en cours...")
+        # Transcription avec Whisper
+        st.info("🧠 Transcription avec Whisper...")
+        model = whisper.load_model("base")
         result = model.transcribe(audio_path)
 
-        # Affichage
+        # Résultat
         st.success("✅ Transcription terminée !")
         st.subheader("📝 Texte extrait :")
         st.text_area("Résultat", result["text"], height=300)
 
-        # Téléchargement
-        st.download_button("⬇️ Télécharger le texte", result["text"], file_name="transcription.txt")
+        st.download_button("⬇️ Télécharger la transcription", result["text"], file_name="transcription.txt")
 
-        # Nettoyage des fichiers temporaires
+        # Nettoyage
         os.remove(video_path)
         os.remove(audio_path)
