@@ -1,4 +1,5 @@
 streamlit
 openai-whisper
 moviepy
-torch  # nécessaire pour faire tourner whisper
+imageio-ffmpeg
+torch>=2.0.0
